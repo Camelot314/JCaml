@@ -99,6 +99,7 @@
     [(Empty)            (compile-value '())]
     [(Var x)            (compile-variable x c)]
     [(Str s)            (compile-string s)]
+		[(Error-v e)				(compile-error-v e c t?)]
     [(Prim0 p)          (compile-prim0 p c)]
     [(Prim1 p e)        (compile-prim1 p e c)]
     [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
@@ -140,6 +141,22 @@
      (seq (Mov rax (char->integer c))
           (Mov (Offset rbx i) 'eax)
           (compile-string-chars cs (+ 4 i)))]))
+
+(define (compile-error-v e c t?)
+	(seq (compile-e e c t?)
+			 ;; now the result is in rax
+			 (assert-string rax)
+			 ;; adding the error-v tag
+			 (Xor rax type-str)
+			 (Or rax type-error-v)))
+
+;; compiles an error that is only used internally
+(define (compile-error text)
+	(seq (compile-string text) 
+			 ;; adding the error-v tag
+			 (Xor rax type-str)
+			 (Or rax type-error)))
+
 
 ;; Op0 CEnv -> Asm
 (define (compile-prim0 p c)

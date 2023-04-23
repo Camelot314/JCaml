@@ -43,7 +43,10 @@
     [(Empty)  '()]
     [(Var x)  (interp-var x r ds)]
     [(Str s)  (string-copy s)]
-		[(Error-v (Str s)) 	(Error-v (string-copy s))]
+		[(Error-v e)
+		 (match (interp-env e r ds)
+			 [(? string? s) (Error-v s)]
+			 [x 						(Error "error: need string")])]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
     [(Prim0 'peek-byte) (peek-byte)]

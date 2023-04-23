@@ -23,37 +23,57 @@
                      (Call 'peek_byte)
                      unpad-stack)]))
 
+;; Proc Register String Asm -> Asm
+(define (assert-help func reg message post)
+	(let ([end (gensym)])
+		(seq (func reg message)
+				 (Mov r9 rax)				;; copying to r9, rax untouched
+				 (And r9 ptr-mask)
+				 (Cmp r9 type-error)
+				 ;; if it is an error then we should not run the post code
+				 (Jne end)
+				 post
+				 (Label end))))
 ;; Op1 -> Asm
 (define (compile-op1 p)
+	(let ([m "primitive 1 error"])
   (match p
     ['add1
-     (seq (assert-integer rax)
-          (Add rax (value->bits 1)))]
+     (assert-help 
+			 assert-integer rax m
+			 (Add rax (value->bits 1)))]
     ['sub1
-     (seq (assert-integer rax)
-          (Sub rax (value->bits 1)))]
+     (assert-help 
+			 assert-integer rax m
+			 (Sub rax (value->bits 1)))]
     ['zero?
-     (seq (assert-integer rax)
-          (eq-value 0))]
+     (assert-help 
+			 assert-integer rax m
+       (eq-value 0))]
     ['char?
      (type-pred mask-char type-char)]
     ['char->integer
-     (seq (assert-char rax)
-          (Sar rax char-shift)
-          (Sal rax int-shift))]
+     (assert-help 
+			 assert-codepoint rax m 
+			 (seq (Sar rax char-shift)
+          	(Sal rax int-shift)))]
     ['integer->char
-     (seq (assert-codepoint rax)
-          (Sar rax int-shift)
-          (Sal rax char-shift)
-          (Xor rax type-char))]
+		 (assert-help
+			 assert-codepoint rax m
+			 (seq (Sar rax int-shift)
+						(Sal rax char-shift)
+						(Xor rax type-char)))]
     ['eof-object? (eq-value eof)]
     ['write-byte
-     (seq (assert-byte rax)
-          pad-stack
-          (Mov rdi rax)
-          (Call 'write_byte)
-          unpad-stack
-          (Mov rax (value->bits (void))))]
+		 (assert-help
+			 assert-byte rax m
+			 (seq pad-stack
+						(Mov rdi rax)
+						(Call 'write_byte)
+						unpad-stack
+						(Mov rax (value->bits (void)))))]
+
+		 ;; TODO: FINISH ALL OTHER PRIMITIVES
     ['box
      (seq (Mov (Offset rbx 0) rax)
           (Mov rax rbx)
@@ -105,7 +125,9 @@
             (Jmp done)
             (Label zero)
             (Mov rax 0)
-            (Label done)))]))
+            (Label done)))]
+		;; TODO: error?
+		)))
 
 ;; Op2 -> Asm
 (define (compile-op2 p)
@@ -273,12 +295,17 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; assert type now puts type error in rax if it recieves an error
 (define (assert-type mask type)
-  (λ (arg)
-    (seq (Mov r9 arg)
-         (And r9 mask)
-         (Cmp r9 type)
-         (Jne 'raise_error_align))))
+  (λ (arg message)
+		(let ([label gensym])
+    	(seq (Mov r9 arg)
+					 (And r9 mask)
+					 (Cmp r9 type)
+					 (Je label)
+					 ;; only repopulating rax if there is an error
+					 (compile-error message)
+					 (Label label)))
 
 (define (type-pred mask type)
   (let ((l (gensym)))
