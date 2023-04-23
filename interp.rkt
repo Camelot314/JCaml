@@ -27,7 +27,11 @@
 (define (interp p)
   (match p
     [(Prog ds e)
-     (interp-env e '() ds)]))
+     (match (interp-env e '() ds)
+			 ; for printing errors
+			 [(Error m) 	(string-append "ERROR: " m)]
+			 [(Error-v m) (string-append "Error type: " m)]
+			 [x 					x])]))
 
 ;; Expr Env Defns -> Answer
 (define (interp-env e r ds)
@@ -39,6 +43,8 @@
     [(Empty)  '()]
     [(Var x)  (interp-var x r ds)]
     [(Str s)  (string-copy s)]
+		[(Error (Str s)) 		(Error (string-copy s))]
+		[(Error-v (Str s)) 	(Error-v (string-copy s))]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
     [(Prim0 'peek-byte) (peek-byte)]
@@ -80,7 +86,7 @@
        ; check arity matches
        (if (= (length xs) (length vs))
            (interp-env e (append (zip xs vs) r) ds)
-           (Error "arity mismatch")))]
+           (Error "lambda: arity mismatch")))]
     [(App e es)
      (match (interp-env e r ds)
        [(Error x) (Error x)]
@@ -90,20 +96,24 @@
           [vs
            (if (procedure? f)
                (apply f vs)
-               (Error "not a precedure"))])])]
+               (Error "apply: not a precedure"))])])]
     [(Match e ps es)
      (match (interp-env e r ds)
        [(Error x) (Error x)]
        [v
         (interp-match v ps es r ds)])]
-		[(Raise e) 
+		[(Get-Message e)
 		 (match (interp-env e r ds)
-			 [(Error-v m) (Error m)])				;; checking if error value
-		 ]
-		[(Try-Catch e1 id e2)
-		 (match (interp-env e1 r ds)
-			 [(Error x) (interp-env e2 (ext r id (Error-v x)) ds)]
-			 [x 				x])]))
+			 [(Error-v m) m]
+			 [_						(Error "get-message: type error")])]
+		[(Raise e)
+		 (match (interp-env e r ds)
+			 [(Error-v m) (Error m)]
+			 [_ 					(Error "raise type: error")])]
+		[(Try-Catch t id c)
+		 (match (interp-env t r ds)
+			 [(Error m) (interp-env c (ext r id (Error-v m)) ds)]
+			 [x					x])]))
 
 ;; Value [Listof Pat] [Listof Expr] Env Defns -> Answer
 (define (interp-match v ps es r ds)
@@ -140,9 +150,9 @@
 ;; Id Env [Listof Defn] -> Answer
 (define (interp-var x r ds)
   (match (lookup r x)
-    [(Error x) (match (defns-lookup ds x)
+    [(Error m) (match (defns-lookup ds x)
             [(Defn f xs e) (interp-env (Lam f xs e) '() ds)]
-            [#f (Error "lookup error")])]
+            [#f (Error "variable: lookup error")])]
     [v v]))
 
 ;; (Listof Expr) REnv Defns -> (Listof Value) | (Error x)
@@ -167,9 +177,3 @@
     [((cons x xs) (cons y ys))
      (cons (list x y)
            (zip xs ys))]))
-
-;; Any -> bool
-(define (error-v? x)
-	(match x
-		[(Error-v _) 	#t]
-		[_				 		#f]))

@@ -27,6 +27,8 @@
 ;;           | (Error Expr)		;; Error that is raised in runtime
 ;;           | (Error-v Expr) ;; The error that can be saved (the value)
 ;;					 | (Raise Expr)
+;;					 | (Get-Message Expr)
+;;					 | (Try-Catch Expr Id Expr)
 ;; type Id   = Symbol
 ;; type Op0  = 'read-byte
 ;; type Op1  = 'add1 | 'sub1 | 'zero?
@@ -72,6 +74,8 @@
 (struct Error-v (e)				 #:prefab)
 (struct Match (e ps es)    #:prefab)
 (struct Raise (e)					 #:prefab)
+(struct Get-Message (e) 	 #:prefab)
+(struct Try-Catch (t x c)	 #:prefab)
 
 (struct PVar  (x)          #:prefab)
 (struct PWild ()           #:prefab)

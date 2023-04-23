@@ -24,7 +24,10 @@
     [(list 'vector-length (? vector?))    (vector-length v)]
     [(list 'string? v)                    (string? v)]
     [(list 'string-length (? string?))    (string-length v)]
-    [_                                    (Error "not primitive")]))
+		[(list 'error? v)											(match v
+																						[(Error-v _) #t]
+																						[_					 #f])]
+    [_                                    (Error "primitive 1 error")]))
 
 ;; Op2 Value Value -> Answer
 (define (interp-prim2 p v1 v2)
@@ -51,7 +54,7 @@
      (if (<= 0 v2 (sub1 (string-length v1)))
          (string-ref v1 v2)
          (Error "string-ref"))]
-    [_ (Error "not primitive")]))
+    [_ (Error "primitive 2 error")]))
 
 ;; Op3 Value Value Value -> Answer
 (define (interp-prim3 p v1 v2 v3)
@@ -60,12 +63,11 @@
      (if (<= 0 v2 (sub1 (vector-length v1)))
          (vector-set! v1 v2 v3)
          (Error "vector-set"))]
-    [_ (Error "not primitive")]))
+    [_ (Error "primitive 3 error")]))
 
 ;; Any -> Boolean
 (define (codepoint? v)
   (and (integer? v)
        (or (<= 0 v 55295)
            (<= 57344 v 1114111))))
-
 

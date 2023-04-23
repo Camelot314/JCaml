@@ -50,13 +50,9 @@
          (Lam (gensym 'lambda) xs (parse-e e))
          (error "parse lambda error"))]
 		[(list 'error x) 				(Error-v (parse-e x))]
-		[(list 'raise x) 				(Raise (parse-e x))]
-		[(list 'try-catch t (? symbol? x) c) 
-		 (App 
-			 (Lam (gensym 'lambda) 
-						(list x) 
-						(If (Prim1 'error? (Var x)) (parse-e c) (Var x))) 
-			 (list (parse-e t)))]
+		[(list 'raise x)				(Raise (parse-e x))]
+		[(list 'get-message x)	(Get-Message (parse-e x))]
+		[(list 'try-catch t (? symbol? x) c) (Try-Catch (parse-e t) x (parse-e c))]
     [(cons e es)
      (App (parse-e e) (map parse-e es))]    
     [_ (error "Parse error" s)]))
@@ -94,7 +90,7 @@
   '(add1 sub1 zero? char? write-byte eof-object?
          integer->char char->integer
          box unbox empty? cons? box? car cdr
-         vector? vector-length string? string-length error?))
+         vector? vector-length string? string-length error? error-internal?))
 (define op2
   '(+ - < = cons eq? make-vector vector-ref make-string string-ref))
 (define op3
