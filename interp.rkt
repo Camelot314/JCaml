@@ -43,7 +43,6 @@
     [(Empty)  '()]
     [(Var x)  (interp-var x r ds)]
     [(Str s)  (string-copy s)]
-		[(Error (Str s)) 		(Error (string-copy s))]
 		[(Error-v (Str s)) 	(Error-v (string-copy s))]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]

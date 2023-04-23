@@ -3,6 +3,6 @@
 
 #include "values.h"
 
-void print_result(val_t);
+int print_result(val_t);
 
 #endif

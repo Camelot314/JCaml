@@ -11,41 +11,55 @@ void print_str_char(val_char_t);
 void print_result_interior(val_t);
 int utf8_encode_char(val_char_t, char *);
 
-void print_result(val_t x)
+/*
+ * Will return 1 if there was an error 0 otherwise
+ */
+int print_result(val_t x)
 {
   switch (val_typeof(x)) {
   case T_INT:
     printf("%" PRId64, val_unwrap_int(x));
-    break;
+		return 0;
   case T_BOOL:
     printf(val_unwrap_bool(x) ? "#t" : "#f");
-    break;
+		return 0;
   case T_CHAR:
     print_char(val_unwrap_char(x));
-    break;
+		return 0;
   case T_EOF:
     printf("#<eof>");
-    break;
+		return 0;
   case T_VOID:
-    break;
+		return 0;
   case T_EMPTY:
   case T_BOX:
   case T_CONS:
   case T_VECT:    
     printf("'");
     print_result_interior(x);
-    break;
+		return 0;
   case T_STR:
     putchar('"');
     print_str(val_unwrap_str(x));
     putchar('"');
-    break;
+		return 0;
   case T_PROC:
     printf("#<procedure>");
-    break;
+		return 0;
+	case T_ERROR_V:
+		printf("Error type: \"");
+		print_error_v(val_unwrap_error_v(x));
+		putchar('"');
+		return 0;
+	case T_ERROR:
+		printf("ERROR: \"");
+		print_error(val_unwrap_error(x));
+		putchar('"');
+		return 1;
   case T_INVALID:
     printf("internal error");
   }
+	return 1;
 }
 
 void print_result_interior(val_t x)
@@ -112,6 +126,16 @@ void print_str(val_str_t* s)
   uint64_t i;
   for (i = 0; i < s->len; ++i)
     print_str_char(s->codepoints[i]);
+}
+
+void print_error_v(val_error_v_t* v)
+{
+	print_str((val_str_t*)v);
+}
+
+void print_error(val_error_t* v)
+{
+	print_str((val_str_t*)v);
 }
 
 void print_str_char_u(val_char_t c)

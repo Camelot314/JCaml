@@ -22,6 +22,8 @@ void raise_error()
 
 int main(int argc, char** argv)
 {
+
+	int exit;
   in = stdin;
   out = stdout;
   error_handler = &error_exit;
@@ -31,10 +33,11 @@ int main(int argc, char** argv)
 
   result = entry(heap);
 
-  print_result(result);
+  exit = print_result(result);
   if (val_typeof(result) != T_VOID)
     putchar('\n');
 
   free(heap);
-  return 0;
+
+  return exit;
 }

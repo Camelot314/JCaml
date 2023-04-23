@@ -14,6 +14,10 @@ type_t val_typeof(val_t x)
     return T_STR;
   case proc_type_tag:
     return T_PROC;
+	case error_v_type_tag:
+		return T_ERROR_V;
+	case error_type_tag:
+		return T_ERROR;
   }
 
   if ((int_type_mask & x) == int_type_tag)
@@ -108,3 +112,21 @@ val_t val_wrap_str(val_str_t *v)
 {
   return ((val_t)v) | str_type_tag;
 }
+
+val_error_v_t* val_unwrap_error_v(val_t x)
+{
+	return (val_error_v_t *)(x ^ error_v_type_tag);
+}
+val_t val_wrap_error_v(val_error_v_t *v)
+{
+	return ((val_t)v) | error_v_type_tag;
+}
+
+val_error_t* val_unwrap_error(val_t x)
+{
+	return (val_error_t *)(x ^ error_type_tag);
+}
+val_t val_wrap_error(val_error_t *v)
+{
+	return ((val_t)v) | error_type_tag;
+}	
