@@ -52,7 +52,11 @@
 		[(list 'error x) 				(Error-v (parse-e x))]
 		[(list 'raise x)				(Raise (parse-e x))]
 		[(list 'get-message x)	(Get-Message (parse-e x))]
-		[(list 'try-catch t (? symbol? x) c) (Try-Catch (parse-e t) x (parse-e c))]
+		[(list 'try-catch t (? symbol? x) c) 
+		 (App 
+			 (Lam (gensym 'lambda) (list x) 
+						(If (Error-Intern? (Var x)) (parse-e c) (Var x)))
+			 (list (parse-e t)))]
     [(cons e es)
      (App (parse-e e) (map parse-e es))]    
     [_ (error "Parse error" s)]))
