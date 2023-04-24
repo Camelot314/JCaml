@@ -1,4 +1,4 @@
 *.o
 *.run
 *.s
-./test/
+test/
