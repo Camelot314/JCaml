@@ -8,6 +8,8 @@ void print_cons(val_cons_t *);
 void print_vect(val_vect_t*);
 void print_str(val_str_t*);
 void print_str_char(val_char_t);
+void print_error_v(val_error_v_t*);
+void print_error(val_error_t*);
 void print_result_interior(val_t);
 int utf8_encode_char(val_char_t, char *);
 

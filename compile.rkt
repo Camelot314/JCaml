@@ -109,7 +109,11 @@
     [(Let x e1 e2)      (compile-let x e1 e2 c t?)]
     [(App e es)         (compile-app e es c t?)]
     [(Lam f xs e)       (compile-lam f xs e c)]
-    [(Match e ps es)    (compile-match e ps es c t?)]))
+    [(Match e ps es)    (compile-match e ps es c t?)]
+		[(Raise e)					(compile-raise e c t?)]
+		[(Get-Message e)		(compile-get-message e c t?)]
+		;;TODO:  try-catch
+		))
 
 ;; Value -> Asm
 (define (compile-value v)
@@ -143,20 +147,33 @@
           (compile-string-chars cs (+ 4 i)))]))
 
 (define (compile-error-v e c t?)
-	(seq (compile-e e c t?)
+	(let ([end (gensym)])
+		(seq (compile-e e c t?)
 			 ;; now the result is in rax
-			 (assert-string rax)
-			 ;; adding the error-v tag
-			 (Xor rax type-str)
-			 (Or rax type-error-v)))
+			 (assert-help
+				 assert-string rax "error: need string"
+				 (seq	(Xor rax type-str)
+							(Or rax type-error-v))))))
 
-;; compiles an error that is only used internally
-(define (compile-error text)
-	(seq (compile-string text) 
-			 ;; adding the error-v tag
-			 (Xor rax type-str)
-			 (Or rax type-error)))
+;; Expr CEnv Bool -> Asm
+;; Will get the message of an error by removing the error tag and replacing
+;; it with the string tag
+(define (compile-get-message e c t?)
+	(seq (compile-e e c t?)
+			 (assert-help
+				 assert-error-v rax "get-message: type error"
+				 (seq	(Xor	rax type-error-v)
+							(Or 	rax type-str)))))
 
+;; Expr CEnv Bool -> Asm
+;; Will turn an error-v into an error 
+(define (compile-raise e c t?)
+	(seq (compile-e e c t?)
+			 (assert-help
+				 assert-error-v rax "raise: type error"
+				 (seq	(Xor	rax type-error-v)
+							(Or 	rax type-error)))))
+				 
 
 ;; Op0 CEnv -> Asm
 (define (compile-prim0 p c)
@@ -221,10 +238,11 @@
        (move-args (add1 (length es)) (length c))
        (Add rsp (* 8 (length c)))
        (Mov rax (Offset rsp (* 8 (length es))))
-       (assert-proc rax)
-       (Xor rax type-proc)
-       (Mov rax (Offset rax 0))
-       (Jmp rax)))
+			 (assert-help 
+				 assert-proc rax "apply: not a procedure"
+				 (seq	(Xor rax type-proc)
+							(Mov rax (Offset rax 0))
+							(Jmp rax)))))
 
 ;; Integer Integer -> Asm
 (define (move-args i off)
@@ -245,11 +263,12 @@
          (Push rax)
          (compile-es (cons e es) (cons #f c))         
          (Mov rax (Offset rsp i))
-         (assert-proc rax)
-         (Xor rax type-proc)
-         (Mov rax (Offset rax 0)) ; fetch the code label
-         (Jmp rax)
-         (Label r))))
+				 (assert-help
+					 assert-proc rax "apply: not a procedure"
+					 (seq	(Xor rax type-proc)
+         				(Mov rax (Offset rax 0)) ; fetch the code label
+         				(Jmp rax)
+         				(Label r))))))
 
 ;; Defns -> Asm
 ;; Compile the closures for ds and push them on the stack

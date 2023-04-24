@@ -111,7 +111,7 @@
 		[(Raise e)
 		 (match (interp-env e r ds)
 			 [(Error-v m) (Error m)]
-			 [_ 					(Error "raise type: error")])]
+			 [_ 					(Error "raise: type error")])]
 		[(Try-Catch t id c)
 		 (match (interp-env t r ds)
 			 [(Error m) (interp-env c (ext r id (Error-v m)) ds)]
