@@ -46,15 +46,29 @@
   (check-equal? (run '(integer->char 955)) #\λ)
 
   ;; Extort examples
-  (check-equal? (run '(add1 #f)) 'err)
-  (check-equal? (run '(sub1 #f)) 'err)
-  (check-equal? (run '(zero? #f)) 'err)
-  (check-equal? (run '(char->integer #f)) 'err)
-  (check-equal? (run '(integer->char #f)) 'err)
-  (check-equal? (run '(integer->char -1)) 'err)
-  (check-equal? (run '(write-byte #f)) 'err)
-  (check-equal? (run '(write-byte -1)) 'err)
-  (check-equal? (run '(write-byte 256)) 'err)
+  (check-equal? (run '(add1 #f)) "ERROR: primitive 1 error")
+  (check-equal? (run '(sub1 #f)) "ERROR: primitive 1 error")
+  (check-equal? (run '(zero? #f)) "ERROR: primitive 1 error")
+  (check-equal? (run '(char->integer #f)) "ERROR: primitive 1 error")
+  (check-equal? (run '(integer->char #f)) "ERROR: primitive 1 error")
+  (check-equal? (run '(integer->char -1)) "ERROR: primitive 1 error")
+  (check-equal? (run '(write-byte #f)) "ERROR: primitive 1 error")
+  (check-equal? (run '(write-byte -1)) "ERROR: primitive 1 error")
+  (check-equal? (run '(write-byte 256)) "ERROR: primitive 1 error")
+	(check-equal? (run '(string-length 3)) "ERROR: primitive 1 error")
+	(check-equal? (run '(+ 2 "a"))				"ERROR: primitive 2 error")
+	(check-equal? (run '(+ #f 2))					"ERROR: primitive 2 error")
+	(check-equal? (run '(vector-ref #t 3)) "ERROR: primitive 2 error")
+	(check-equal? (run '(vector-ref (make-vector 1 1) -1)) "ERROR: vector-ref")
+	(check-equal? (run '(make-string -1 #\a))	"ERROR: make-string")
+	(check-equal? (run '(make-vector -1 #\a))	"ERROR: make-vector")
+	(check-equal? (run '(string-ref "a" -1))	"ERROR: string-ref")
+	(check-equal? (run '(string-ref "a" 2))	"ERROR: string-ref")
+	(check-equal? (run '(vector-set! "a" -1 3))	"ERROR: primitive 3 error")
+	(check-equal? (run 
+		'(vector-set! (make-vector 0 #\a) -1 3))	"ERROR: vector-set")
+	
+
 
   ;; Fraud examples
   (check-equal? (run '(let ((x 7)) x)) 7)

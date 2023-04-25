@@ -33,7 +33,11 @@
                          (char-ref (+ i 8) j))))]
     [(? proc-bits? i)
      (lambda _
-       (error "This function is not callable."))]))
+       (error "This function is not callable."))]
+		[(? error-v-bits? i) 
+		 (string-append "Error type: " (unload-value (err->string-bits i)))]
+		[(? error-bits? i) 
+		 (string-append "ERROR: " (unload-value (err->string-bits i)))]))
 
 (define (untag i)
   (arithmetic-shift (arithmetic-shift i (- (integer-length ptr-mask)))
