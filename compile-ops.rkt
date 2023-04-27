@@ -66,7 +66,7 @@
      (type-pred mask-char type-char)]
     ['char->integer
      (assert-help 
-			 assert-codepoint rax m 
+			 assert-char rax m
 			 (seq (Sar rax char-shift)
           	(Sal rax int-shift)))]
     ['integer->char
