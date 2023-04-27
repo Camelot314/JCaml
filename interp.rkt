@@ -160,7 +160,7 @@
   (match (lookup r x)
     [(Error m) (match (defns-lookup ds x)
             [(Defn f xs e) (interp-env (Lam f xs e) '() ds)]
-            [#f (Error "variable: lookup error")])]
+            [#f (Error "lookup error")])]
     [v v]))
 
 ;; (Listof Expr) REnv Defns -> (Listof Value) | (Error x)

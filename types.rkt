@@ -71,3 +71,14 @@
 
 (define (proc-bits? v)
   (zero? (bitwise-xor (bitwise-and v imm-mask) type-proc)))
+
+(define (error-v-bits? v)
+	(zero? (bitwise-xor (bitwise-and v imm-mask) type-error-v)))
+
+(define (error-bits? v)
+	(zero? (bitwise-xor (bitwise-and v imm-mask) type-error)))
+
+(define (err->string-bits v)
+	(if (error-bits? v)
+		(bitwise-ior (bitwise-xor v type-error) type-str)
+		(bitwise-ior (bitwise-xor v type-error-v) type-str)))

@@ -121,8 +121,9 @@
 
 ;; Id CEnv -> Asm
 (define (compile-variable x c)
-  (let ((i (lookup x c)))
-    (seq (Mov rax (Offset rsp i)))))
+	(match (lookup x c)
+		[(Error m)	(compile-error m)]
+		[i					(seq (Mov rax (Offset rsp i)))]))
 
 ;; String -> Asm
 (define (compile-string s)
@@ -174,6 +175,14 @@
 				 (seq	(Xor	rax type-error-v)
 							(Or 	rax type-error)))))
 				 
+;; will check if the value in rax is an error. If it is then jumping to the 
+;; label
+;; NOTE: uses r9
+(define (propagate label)
+	(seq 	(Mov r9 rax)
+				(And r9 ptr-mask)
+				(Cmp r9 type-error)
+				(Je label)))
 
 ;; Op0 CEnv -> Asm
 (define (compile-prim0 p c)
@@ -181,30 +190,65 @@
 
 ;; Op1 Expr CEnv -> Asm
 (define (compile-prim1 p e c)
-  (seq (compile-e e c #f)
-       (compile-op1 p)))
+	(let ([end (gensym 'prim1_e)])
+		(seq (%%% "compile prim 1")
+				 (compile-e e c #f)
+				 (propagate end)
+				 (compile-op1 p)
+				 (Label end))))
 
 ;; Op2 Expr Expr CEnv -> Asm
 (define (compile-prim2 p e1 e2 c)
-  (seq (compile-e e1 c #f)
-       (Push rax)
-       (compile-e e2 (cons #f c) #f)
-       (compile-op2 p)))
+	(let ([end (gensym 'prim2_e)]
+				[cleanup (gensym 'prim2_cleanup)])
+		(seq (%%% "compiling prim 2")
+				 (compile-e e1 c #f)
+				 (propagate end)
+				 (Push rax)
+				 (compile-e e2 (cons #f c) #f)
+				 (propagate cleanup)
+				 (compile-op2 p)
+				 (Jmp end)
+				 (Label cleanup)
+				 (Add rsp 8)
+				 (Label end))))
 
 ;; Op3 Expr Expr Expr CEnv -> Asm
 (define (compile-prim3 p e1 e2 e3 c)
-  (seq (compile-e e1 c #f)
-       (Push rax)
-       (compile-e e2 (cons #f c) #f)
-       (Push rax)
-       (compile-e e3 (cons #f (cons #f c)) #f)
-       (compile-op3 p)))
+	(let ([end (gensym 'prim3_e)]
+				[cleanup1 (gensym 'prim3_cleanup1_)]
+				[cleanup2 (gensym 'prim3_cleanup2_)])
+		(seq (%%% "compiling prim 3")
+				 (compile-e e1 c #f)
+				 (propagate end)
+				 (Push rax)
+				 (compile-e e2 (cons #f c) #f)
+				 (propagate cleanup1)
+				 (Push rax)
+				 (compile-e e3 (cons #f (cons #f c)) #f)
+				 (propagate cleanup2)
+				 (compile-op3 p)
+				 (Jmp end)
+				 (Label cleanup2)
+				 (Add rsp 8)
+				 (Label cleanup1)
+				 (Add rsp 8)
+				 (Label end))))
+
+
+  #| (seq (compile-e e1 c #f) |#
+  #|      (Push rax) |#
+  #|      (compile-e e2 (cons #f c) #f) |#
+  #|      (Push rax) |#
+  #|      (compile-e e3 (cons #f (cons #f c)) #f) |#
+  #|      (compile-op3 p))) |#
 
 ;; Expr Expr Expr CEnv Bool -> Asm
 (define (compile-if e1 e2 e3 c t?)
   (let ((l1 (gensym 'if))
         (l2 (gensym 'if)))
     (seq (compile-e e1 c #f)
+				 (propagate l2)
          (Cmp rax val-false)
          (Je l1)
          (compile-e e2 c t?)
@@ -215,22 +259,32 @@
 
 ;; Expr Expr CEnv Bool -> Asm
 (define (compile-begin e1 e2 c t?)
-  (seq (compile-e e1 c #f)
-       (compile-e e2 c t?)))
+	(let ([end (gensym)])
+  	(seq (compile-e e1 c #f)
+				 (propagate end)
+       	 (compile-e e2 c t?)
+				 (Label end))))
 
 ;; Id Expr Expr CEnv Bool -> Asm
 (define (compile-let x e1 e2 c t?)
-  (seq (compile-e e1 c #f)
-       (Push rax)
-       (compile-e e2 (cons x c) t?)
-       (Add rsp 8)))
+	(let ([end (gensym)])
+  	(seq 	(compile-e e1 c #f)
+					(propagate end)
+       		(Push rax)
+       		(compile-e e2 (cons x c) t?)
+       		(Add rsp 8)
+					(Label end))))
 
+;; TODO: fix apply, defines, and lambdas
 ;; Id [Listof Expr] CEnv Bool -> Asm
 (define (compile-app f es c t?)
-  ;(compile-app-nontail f es c)
-  (if t?
-      (compile-app-tail f es c)
-      (compile-app-nontail f es c)))
+	(let ([end (gensym)])
+		(seq (%%% "checking if application ponter is error")
+				 (propagate end)
+				 (if t?
+					 (compile-app-tail f es c)
+					 (compile-app-nontail f es c))
+				 (Label end))))
 
 ;; Expr [Listof Expr] CEnv -> Asm
 (define (compile-app-tail e es c)
@@ -335,19 +389,25 @@
   (match es
     ['() '()]
     [(cons e es)
-     (seq (compile-e e c #f)
-          (Push rax)
-          (compile-es es (cons #f c)))]))
+		 (let ([end (gensym)])
+			 (seq (compile-e e c #f)
+						(propagate end)
+          	(Push rax)
+          	(compile-es es (cons #f c))
+						(Label end)))]))
 
 ;; Expr [Listof Pat] [Listof Expr] CEnv Bool -> Asm
 (define (compile-match e ps es c t?)
-  (let ((done (gensym)))
-    (seq (compile-e e c #f)
+  (let ([done (gensym)]
+				[end 	(gensym)])
+    (seq (propagate end) 
+				 (compile-e e c #f)
          (Push rax) ; save away to be restored by each clause
          (compile-match-clauses ps es (cons #f c) done t?)
-         (Jmp 'raise_error_align)
+				 (compile-error "match error")
          (Label done)
-         (Add rsp 8)))) ; pop the saved value being matched
+         (Add rsp 8)
+				 (Label end)))) ; pop the saved value being matched
 
 ;; [Listof Pat] [Listof Expr] CEnv Symbol Bool -> Asm
 (define (compile-match-clauses ps es c done t?)
@@ -444,7 +504,7 @@
 ;; Id CEnv -> Integer
 (define (lookup x cenv)
   (match cenv
-    ['() (error "undefined variable:" x)]
+    ['() (Error "lookup error")]
     [(cons y rest)
      (match (eq? x y)
        [#t 0]
