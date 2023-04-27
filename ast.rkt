@@ -76,6 +76,7 @@
 (struct Raise (e)					 #:prefab)
 (struct Get-Message (e) 	 #:prefab)
 (struct Error-Intern? (e)  #:prefab)
+(struct Error->Val (e)		 #:prefab)
 
 (struct PVar  (x)          #:prefab)
 (struct PWild ()           #:prefab)

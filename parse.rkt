@@ -55,7 +55,9 @@
 		[(list 'try-catch t (? symbol? x) c) 
 		 (App 
 			 (Lam (gensym 'lambda) (list x) 
-						(If (Error-Intern? (Var x)) (parse-e c) (Var x)))
+						(If (Error-Intern? (Var x)) 
+								(Let x (Error->Val x) (parse-e c)) 
+								(Var x)))
 			 (list (parse-e t)))]
     [(cons e es)
      (App (parse-e e) (map parse-e es))]    

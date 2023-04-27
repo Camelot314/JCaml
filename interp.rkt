@@ -113,15 +113,12 @@
 		 (match (interp-env e r ds)
 			 [(Error-v m) (Error m)]
 			 [_ 					(Error "raise: type error")])]
-		[(Error-Intern? e) #t]))
-		 #| (begin (print "ahhhhhhh") |#
-		 #| (match e |#
-			 #| [(Error _) #t] |#
-			 #| [_					#f]))])) |#
-		#| [(Try-Catch t id c) |#
-		#|  (match (interp-env t r ds) |#
-		#| 	 [(Error m) (interp-env c (ext r id (Error-v m)) ds)] |#
-		#| 	 [x					x])])) |#
+		[(Error-Intern? e) 
+		 (match (interp-env e r ds)
+			 [(Error m) #t]
+			 [_					#f])]
+		[(Error->Val e)
+		 (match (interp-env e r ds)))
 
 ;; Value [Listof Pat] [Listof Expr] Env Defns -> Answer
 (define (interp-match v ps es r ds)
