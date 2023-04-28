@@ -112,7 +112,7 @@
     [(Match e ps es)    (compile-match e ps es c t?)]
 		[(Raise e)					(compile-raise e c t?)]
 		[(Get-Message e)		(compile-get-message e c t?)]
-		;;TODO:  try-catch
+		[(Try-Catch e1 x e2) (compile-try-catch e1 x e2 c t?)]
 		))
 
 ;; Value -> Asm
@@ -235,14 +235,6 @@
 				 (Add rsp 8)
 				 (Label end))))
 
-
-  #| (seq (compile-e e1 c #f) |#
-  #|      (Push rax) |#
-  #|      (compile-e e2 (cons #f c) #f) |#
-  #|      (Push rax) |#
-  #|      (compile-e e3 (cons #f (cons #f c)) #f) |#
-  #|      (compile-op3 p))) |#
-
 ;; Expr Expr Expr CEnv Bool -> Asm
 (define (compile-if e1 e2 e3 c t?)
   (let ((l1 (gensym 'if))
@@ -275,7 +267,30 @@
        		(Add rsp 8)
 					(Label end))))
 
+;; Expr Id Expr CEnv Bool -> Asm
+(define (compile-try-catch e1 x e2 c t?)
+	(let ([end (gensym)])
+		(seq (%%% "Try catch code")
+				 (compile-e e1 c #f)
+				 (Mov r9 rax)
+				 (% "checking if rax is an error")
+				 (And r9 ptr-mask)
+				 (Cmp r9 type-error)
+				 (Jne end)
+				 ; need to convert the error to the an error value
+				 ; add to env and compile the catch code
+				 (Xor rax type-error)
+				 (Xor rax type-error-v)
+				 (Push rax)
+				 ; comping the catch code with an extended env where we have the 
+				 ; error value added with the given symbol
+				 (compile-e e2 (cons x c) t?)
+				 ; cleaning up the stack
+				 (Add rsp 8)
+				 (Label end))))
+
 ;; TODO: fix apply, defines, and lambdas
+;; need to check if the params resulted in an error
 ;; Id [Listof Expr] CEnv Bool -> Asm
 (define (compile-app f es c t?)
 	(let ([end (gensym)])
@@ -288,15 +303,22 @@
 
 ;; Expr [Listof Expr] CEnv -> Asm
 (define (compile-app-tail e es c)
-  (seq (compile-es (cons e es) c)
-       (move-args (add1 (length es)) (length c))
-       (Add rsp (* 8 (length c)))
-       (Mov rax (Offset rsp (* 8 (length es))))
-			 (assert-help 
-				 assert-proc rax "apply: not a procedure"
-				 (seq	(Xor rax type-proc)
-							(Mov rax (Offset rax 0))
-							(Jmp rax)))))
+	(let ([end (gensym)])
+    (seq (compile-es (cons e es) c)
+         (propagate end)
+         (move-args (add1 (length es)) (length c))
+			    ;; cleaning up the stack
+          (Add rsp (* 8 (length c)))
+			 
+				  ; TODO:
+				  ; checking if any of the compiled parameters are an error
+          (Mov rax (Offset rsp (* 8 (length es))))
+			    (assert-help 
+				    assert-proc rax "apply: not a procedure"
+				  (seq	(Xor rax type-proc)
+							  (Mov rax (Offset rax 0))
+							  (Jmp rax)))
+          (Label end))))
 
 ;; Integer Integer -> Asm
 (define (move-args i off)
@@ -312,17 +334,22 @@
 ;; arguments and return address is next frame
 (define (compile-app-nontail e es c)
   (let ((r (gensym 'ret))
-        (i (* 8 (length es))))
+        (i (* 8 (length es)))
+        (end (gensym)))
     (seq (Lea rax r)
          (Push rax)
          (compile-es (cons e es) (cons #f c))         
+         (propagate end)
+				 ; TODO:
+				 ; checking if any of the compiled parameters are an error
          (Mov rax (Offset rsp i))
 				 (assert-help
 					 assert-proc rax "apply: not a procedure"
 					 (seq	(Xor rax type-proc)
          				(Mov rax (Offset rax 0)) ; fetch the code label
          				(Jmp rax)
-         				(Label r))))))
+         				(Label r)))
+         (Label end))))
 
 ;; Defns -> Asm
 ;; Compile the closures for ds and push them on the stack
@@ -385,16 +412,42 @@
           (free-vars-to-heap fvs c (+ off 8)))]))
 
 ;; [Listof Expr] CEnv -> Asm
+;; TODO: need to clean up stack if one of them compile to an error
 (define (compile-es es c)
-  (match es
-    ['() '()]
-    [(cons e es)
-		 (let ([end (gensym)])
+	(let ([end (gensym)])
+		(seq (compile-es-helper es c end)
+				 (Label end))))
+  #| (match es |#
+  #|   ['() '()] |#
+  #|   [(cons e es) |#
+		 #| (let ([end (gensym)]) |#
+			 #| (seq (compile-e e c #f) |#
+						#| (propagate end) |#
+  #|         	(Push rax) |#
+  #|         	(compile-es es (cons #f c)) |#
+						#| (Label end)))])) |#
+
+;; [Listof Expr] CEnv int symbol-> Asm
+(define (compile-es-helper es c end)
+	(match es
+		['() (seq (Jmp end))]
+		[(cons e es)
+		 (let ([cleanup (gensym 'cleanup)])
 			 (seq (compile-e e c #f)
-						(propagate end)
-          	(Push rax)
-          	(compile-es es (cons #f c))
-						(Label end)))]))
+						(Push rax)
+						(propagate cleanup)
+						; will only get here if there is no error in rax
+						(compile-es-helper es (cons #f c) end)
+						; will not get gere because compile-es helper will jump past this
+						(Label cleanup)
+						(Add rsp 8)
+						; the next label will be any necessary cleanup for the previous
+						; check
+						))]))
+
+						
+
+
 
 ;; Expr [Listof Pat] [Listof Expr] CEnv Bool -> Asm
 (define (compile-match e ps es c t?)
