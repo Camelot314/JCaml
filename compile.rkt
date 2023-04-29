@@ -76,7 +76,9 @@
               (Xor rax type-proc)
               (copy-env-to-stack fvs 8)
               (compile-e e env #t)
+							(%% "popping the environment")
               (Add rsp (* 8 (length env))) ; pop env
+							(%% "returning from function call")
               (Ret)))])))
 
 ;; [Listof Id] Int -> Asm
@@ -304,21 +306,22 @@
 ;; Expr [Listof Expr] CEnv -> Asm
 (define (compile-app-tail e es c)
 	(let ([end (gensym)])
-    (seq (compile-es (cons e es) c)
+    (seq (%% "tail call")
+				 (compile-es (cons e es) c)
          (propagate end)
          (move-args (add1 (length es)) (length c))
-			    ;; cleaning up the stack
-          (Add rsp (* 8 (length c)))
+			   ;; cleaning up the stack
+         (Add rsp (* 8 (length c)))
 			 
-				  ; TODO:
-				  ; checking if any of the compiled parameters are an error
-          (Mov rax (Offset rsp (* 8 (length es))))
-			    (assert-help 
-				    assert-proc rax "apply: not a procedure"
-				  (seq	(Xor rax type-proc)
-							  (Mov rax (Offset rax 0))
-							  (Jmp rax)))
-          (Label end))))
+				 ; TODO:
+				 ; checking if any of the compiled parameters are an error
+         (Mov rax (Offset rsp (* 8 (length es))))
+			   (assert-help 
+				   assert-proc rax "apply: not a procedure"
+				 (seq	(Xor rax type-proc)
+				 		  (Mov rax (Offset rax 0))
+				 		  (Jmp rax)))
+         (Label end))))
 
 ;; Integer Integer -> Asm
 (define (move-args i off)
@@ -335,11 +338,12 @@
 (define (compile-app-nontail e es c)
   (let ((r (gensym 'ret))
         (i (* 8 (length es)))
-        (end (gensym)))
-    (seq (Lea rax r)
+        (param-error (gensym 'param_error)))
+    (seq (%% "non tail call") 
+				 (Lea rax r)
          (Push rax)
          (compile-es (cons e es) (cons #f c))         
-         (propagate end)
+         (propagate param-error)
 				 ; TODO:
 				 ; checking if any of the compiled parameters are an error
          (Mov rax (Offset rsp i))
@@ -347,9 +351,10 @@
 					 assert-proc rax "apply: not a procedure"
 					 (seq	(Xor rax type-proc)
          				(Mov rax (Offset rax 0)) ; fetch the code label
-         				(Jmp rax)
-         				(Label r)))
-         (Label end))))
+         				(Jmp rax)))
+         (Label param-error)
+				 (Ret)
+				 (Label r))))
 
 ;; Defns -> Asm
 ;; Compile the closures for ds and push them on the stack
@@ -415,8 +420,26 @@
 ;; TODO: need to clean up stack if one of them compile to an error
 (define (compile-es es c)
 	(let ([end (gensym)])
-		(seq (compile-es-helper es c end)
+		#| (match es |# 
+		#| 	['() '()] |#
+		#| 	[(cons func-name es) |#
+		#| 	 (seq (%% "In compile es") |#
+		#| 	 			(%% "first expression is the function definition") |#
+		#| 	 			(%% "We don't need to check if there is an error because") |#
+		#| 				(%% "that was already done") |#
+		#| 	 			(compile-e func-name c #f) |#
+		#| 	 			(Push rax) |#
+		#| 	 			(%% "Entering compile-es-helper") |#
+		#| 	 			(compile-es-helper es (cons #f c) end) ; pushed something on stack |#
+		#| 	 			(Label end))]))) |#
+
+
+
+
+		(seq (%% "in compile-es")
+				 (compile-es-helper es c end)
 				 (Label end))))
+
   #| (match es |#
   #|   ['() '()] |#
   #|   [(cons e es) |#
