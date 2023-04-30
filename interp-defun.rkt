@@ -39,6 +39,10 @@
     [(Empty)  '()]
     [(Var x)  (interp-var x r ds)]
     [(Str s)  (string-copy s)]
+		[(Error-v e)
+		 (match (interp-env e r ds)
+			 [(? string? s) (Error-v s)]
+			 [x 						(Error "error: need string")])]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
     [(Prim0 'peek-byte) (peek-byte)]
@@ -95,12 +99,20 @@
      (match (interp-env e r ds)
        [(Error m) (Error m)]
        [v
-        (interp-match v ps es r ds)])]))
+        (interp-match v ps es r ds)])]
+		[(Raise e)
+		 (match (interp-env e r ds)
+			 [(Error-v m) (Error m)]
+			 [_						(Error "raise: type error")])]
+		[(Try-Catch t id c)
+		 (match (interp-env t r ds)
+			 [(Error m) (interp-env c (ext r id (Error-v m)) ds)]
+			 [x x])]))
 
 ;; Value [Listof Pat] [Listof Expr] Env Defns -> Answer
 (define (interp-match v ps es r ds)
   (match* (ps es)
-    [('() '()) (Error "match: match error")]
+    [('() '()) (Error "match error")]
     [((cons p ps) (cons e es))
      (match (interp-match-pat p v r)
        [#f (interp-match v ps es r ds)]
