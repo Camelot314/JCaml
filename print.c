@@ -49,14 +49,12 @@ int print_result(val_t x)
     printf("#<procedure>");
 		return 0;
 	case T_ERROR_V:
-		printf("Error type: \"");
+		printf("Error type: ");
 		print_error_v(val_unwrap_error_v(x));
-		putchar('"');
 		return 0;
 	case T_ERROR:
-		printf("ERROR: \"");
+		printf("ERROR: ");
 		print_error(val_unwrap_error(x));
-		putchar('"');
 		return 1;
   case T_INVALID:
     printf("internal error");

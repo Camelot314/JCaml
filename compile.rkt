@@ -295,13 +295,8 @@
 ;; need to check if the params resulted in an error
 ;; Id [Listof Expr] CEnv Bool -> Asm
 (define (compile-app f es c t?)
-	(let ([end (gensym)])
-		(seq (%%% "checking if application ponter is error")
-				 (propagate end)
-				 (if t?
-					 (compile-app-tail f es c)
-					 (compile-app-nontail f es c))
-				 (Label end))))
+	(if t? (compile-app-tail f es c)
+		(compile-app-nontail f es c)))
 
 ;; Expr [Listof Expr] CEnv -> Asm
 (define (compile-app-tail e es c)
@@ -313,8 +308,6 @@
 			   ;; cleaning up the stack
          (Add rsp (* 8 (length c)))
 			 
-				 ; TODO:
-				 ; checking if any of the compiled parameters are an error
          (Mov rax (Offset rsp (* 8 (length es))))
 			   (assert-help 
 				   assert-proc rax "apply: not a procedure"
@@ -412,43 +405,23 @@
   (match fvs
     ['() (seq)]
     [(cons x fvs)
-     (seq (Mov r8 (Offset rsp (lookup x c)))
-          (Mov (Offset rbx off) r8)
-          (free-vars-to-heap fvs c (+ off 8)))]))
+		 (match (lookup x c)
+			 [(Error m) (compile-error m)]
+			 [x	(seq (Mov r8 (Offset rsp x))
+							 (Mov (Offset rbx off) r8)
+							 (free-vars-to-heap fvs c (+ off 8)))])]))
+
+     #| (seq (Mov r8 (Offset rsp (lookup x c))) |#
+     #|      (Mov (Offset rbx off) r8) |#
+     #|      (free-vars-to-heap fvs c (+ off 8)))])) |#
 
 ;; [Listof Expr] CEnv -> Asm
 ;; TODO: need to clean up stack if one of them compile to an error
 (define (compile-es es c)
 	(let ([end (gensym)])
-		#| (match es |# 
-		#| 	['() '()] |#
-		#| 	[(cons func-name es) |#
-		#| 	 (seq (%% "In compile es") |#
-		#| 	 			(%% "first expression is the function definition") |#
-		#| 	 			(%% "We don't need to check if there is an error because") |#
-		#| 				(%% "that was already done") |#
-		#| 	 			(compile-e func-name c #f) |#
-		#| 	 			(Push rax) |#
-		#| 	 			(%% "Entering compile-es-helper") |#
-		#| 	 			(compile-es-helper es (cons #f c) end) ; pushed something on stack |#
-		#| 	 			(Label end))]))) |#
-
-
-
-
 		(seq (%% "in compile-es")
 				 (compile-es-helper es c end)
 				 (Label end))))
-
-  #| (match es |#
-  #|   ['() '()] |#
-  #|   [(cons e es) |#
-		 #| (let ([end (gensym)]) |#
-			 #| (seq (compile-e e c #f) |#
-						#| (propagate end) |#
-  #|         	(Push rax) |#
-  #|         	(compile-es es (cons #f c)) |#
-						#| (Label end)))])) |#
 
 ;; [Listof Expr] CEnv int symbol-> Asm
 (define (compile-es-helper es c end)
@@ -461,16 +434,12 @@
 						(propagate cleanup)
 						; will only get here if there is no error in rax
 						(compile-es-helper es (cons #f c) end)
-						; will not get gere because compile-es helper will jump past this
+						; will not get here because compile-es helper will jump past this
 						(Label cleanup)
 						(Add rsp 8)
 						; the next label will be any necessary cleanup for the previous
 						; check
 						))]))
-
-						
-
-
 
 ;; Expr [Listof Pat] [Listof Expr] CEnv Bool -> Asm
 (define (compile-match e ps es c t?)
@@ -584,7 +553,9 @@
     [(cons y rest)
      (match (eq? x y)
        [#t 0]
-       [#f (+ 8 (lookup x rest))])]))
+       [#f (match (lookup x rest)
+						 [(Error m) (Error m)]
+						 [v (+ 8 v)])])]))
 
 ;; Symbol -> Label
 ;; Produce a symbol that is a valid Nasm label

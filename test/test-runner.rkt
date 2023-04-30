@@ -228,7 +228,7 @@
                 "ERROR: primitive 1 error")
 
   ;; Knock examples
-  (check-equal? (run '(match 1)) 'err)
+  (check-equal? (run '(match 1)) "ERROR: match error")
   (check-equal? (run '(match 1 [1 2]))
                 2)
   (check-equal? (run '(match 1 [2 1] [1 2]))
@@ -236,7 +236,7 @@
   (check-equal? (run '(match 1 [2 1] [1 2] [0 3]))
                 2)
   (check-equal? (run '(match 1 [2 1] [0 3]))
-                'err)
+                "ERROR: match error")
   (check-equal? (run '(match 1 [_ 2] [_ 3]))
                 2)
   (check-equal? (run '(match 1 [x 2] [_ 3]))
@@ -305,7 +305,54 @@
                      '(tri 36))
                 666)
   (check-equal? (run '((match 8 [8 (lambda (x) x)]) 12))
-                12))
+                12)
+
+	;; JCaml examples
+	(check-equal? (run '((raise (error "a"))))
+								"ERROR: a")
+	(check-equal? (run '(error "b"))
+								"Error type: b")
+
+
+  (check-equal? (run
+                 '(define (f x y)
+                    (+ x y))
+                 '(let ((z 2)) (f 1 z)))
+                3)
+	(check-equal? (run 
+									'(define (f x y) (+ x y))
+									'(f (add1 #\c) 2))
+								"ERROR: primitive 1 error")
+
+	(check-equal? (run '(define (f x y) (+ x y))
+										 '(f 1 (add1 #f)))
+								"ERROR: primitive 1 error")
+	(check-equal? (run '(define (f x y) (+ x y))
+											'(f (add1 #\c) 2))
+								"ERROR: primitive 1 error")
+	(check-equal? (run '(define (f x y) (+ x y))
+										 '(f (add1 2) 3))
+								6)
+	(check-equal? (run '(define (f x y) (+ x y))
+										 '(f (raise (error "b")) 2))
+								"ERROR: b")
+	(check-equal? (run '(define (f x) (raise (error x)))
+										 '(f "asd"))
+								"ERROR: asd")
+	(check-equal? (run '(f 1 2))
+								"ERROR: lookup error")
+								
+	(check-equal? (run 
+									'(define (f x) (if (zero? x) (add1 #f) (f (sub1 x))))
+									'(f 1))
+								"ERROR: primitive 1 error")
+
+
+	 (check-equal? (run 
+									'(define (f x) (if (zero? x) (add1 17) (f (sub1 x))))
+									'(f 1))
+								18)
+	)
 
 (define (test-runner-io run)
   ;; Evildoer examples
@@ -323,7 +370,7 @@
   (check-equal? (run "ab" '(peek-byte)) (cons 97 ""))
   (check-equal? (run "ab" '(begin (peek-byte) (read-byte))) (cons 97 ""))
   ;; Extort examples
-  (check-equal? (run "" '(write-byte #t)) (cons 'err ""))
+  (check-equal? (run "" '(write-byte #t)) (cons "ERROR: primitive 1 error" ""))
 
   ;; Fraud examples
   (check-equal? (run "" '(let ((x 97)) (write-byte x))) (cons (void) "a"))
