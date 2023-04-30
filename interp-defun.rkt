@@ -100,9 +100,15 @@
        [(Error m) (Error m)]
        [v
         (interp-match v ps es r ds)])]
+		[(Get-Message e)
+		 (match (interp-env e r ds)
+			 [(Error m)	(Error m)]
+			 [(Error-v m) m]
+			 [_ 	(Error "raise: type error")])]
 		[(Raise e)
 		 (match (interp-env e r ds)
-			 [(Error-v m) (Error m)]
+			 [(Error m)		(Error m)]
+			 [(Error-v m) m]
 			 [_						(Error "raise: type error")])]
 		[(Try-Catch t id c)
 		 (match (interp-env t r ds)
