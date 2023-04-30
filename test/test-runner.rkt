@@ -346,12 +346,20 @@
 									'(define (f x) (if (zero? x) (add1 #f) (f (sub1 x))))
 									'(f 1))
 								"ERROR: primitive 1 error")
-
-
 	 (check-equal? (run 
 									'(define (f x) (if (zero? x) (add1 17) (f (sub1 x))))
 									'(f 1))
 								18)
+	 (check-equal? (run '((raise (error 7)))) "ERROR: error: need string")
+	 (check-equal? (run '((raise 7))) "ERROR: raise: type error")
+	 (check-equal? (run '((error 56))) "ERROR: error: need string")
+	 (check-equal? (run '(begin (raise (error "a")) 7)) "ERROR: a")
+	 (check-equal? (run '(try-catch (raise (error "b")) err (get-message err)))
+								 "b")
+	 (check-equal? (run '(begin (try-catch (add1 #f) _ 7) 10))
+								 10)
+	 (check-equal? (run '(try-catch (f 2) err (get-message err)))
+								 "lookup error")
 	)
 
 (define (test-runner-io run)
