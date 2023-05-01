@@ -24,9 +24,9 @@
     [(list 'vector-length (? vector?))    (vector-length v)]
     [(list 'string? v)                    (string? v)]
     [(list 'string-length (? string?))    (string-length v)]
-		[(list 'error? v)											(match v
-																						[(Error-v _) #t]
-																						[_					 #f])]
+    [(list 'error? v)                     (match v
+                                            [(Error-v _) #t]
+                                            [_           #f])]
     [_                                    (Error "primitive 1 error")]))
 
 ;; Op2 Value Value -> Answer

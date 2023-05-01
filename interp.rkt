@@ -28,10 +28,10 @@
   (match p
     [(Prog ds e)
      (match (interp-env e '() ds)
-			 ; for printing errors
-			 [(Error m) 	(string-append "ERROR: " m)]
-			 [(Error-v m) (string-append "Error type: " m)]
-			 [x 					x])]))
+       ; for printing errors
+       [(Error m)   (string-append "ERROR: " m)]
+       [(Error-v m) (string-append "Error type: " m)]
+       [x           x])]))
 
 ;; Expr Env Defns -> Answer
 (define (interp-env e r ds)
@@ -43,10 +43,10 @@
     [(Empty)  '()]
     [(Var x)  (interp-var x r ds)]
     [(Str s)  (string-copy s)]
-		[(Error-v e)
-		 (match (interp-env e r ds)
-			 [(? string? s) (Error-v s)]
-			 [x 						(Error "error: need string")])]
+    [(Error-v e)
+     (match (interp-env e r ds)
+       [(? string? s) (Error-v s)]
+       [x             (Error "error: need string")])]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
     [(Prim0 'peek-byte) (peek-byte)]
@@ -104,20 +104,20 @@
        [(Error x) (Error x)]
        [v
         (interp-match v ps es r ds)])]
-		[(Get-Message e)
-		 (match (interp-env e r ds)
-			 [(Error m) (Error m)]
-			 [(Error-v m) m]
-			 [_						(Error "get-message: type error")])]
-		[(Raise e)
-		 (match (interp-env e r ds)
-			 [(Error-v m) (Error m)]
-			 [(Error m)		(Error m)]
-			 [_ 					(Error "raise: type error")])]
-		[(Try-Catch t id c)
-		 (match (interp-env t r ds)
-			 [(Error m) (interp-env c (ext r id (Error-v m)) ds)]
-			 [x					x])]))
+    [(Get-Message e)
+     (match (interp-env e r ds)
+       [(Error m) (Error m)]
+       [(Error-v m) m]
+       [_           (Error "get-message: type error")])]
+    [(Raise e)
+     (match (interp-env e r ds)
+       [(Error-v m) (Error m)]
+       [(Error m)   (Error m)]
+       [_           (Error "raise: type error")])]
+    [(Try-Catch t id c)
+     (match (interp-env t r ds)
+       [(Error m) (interp-env c (ext r id (Error-v m)) ds)]
+       [x         x])]))
 
 ;; Value [Listof Pat] [Listof Expr] Env Defns -> Answer
 (define (interp-match v ps es r ds)

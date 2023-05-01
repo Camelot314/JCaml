@@ -29,7 +29,7 @@
     (if (zero? len)
         (seq (Mov rax type-error))
         (seq (%%% "compiling error message")
-						 (Mov rax len)
+             (Mov rax len)
              (Mov (Offset rbx 0) rax)
              (compile-string-chars (string->list s) 8)
              (Mov rax rbx)
@@ -48,62 +48,62 @@
 
 ;; Op1 -> Asm
 (define (compile-op1 p)
-	(let ([m "primitive 1 error"])
+  (let ([m "primitive 1 error"])
   (match p
     ['add1
      (assert-help 
-			 assert-integer rax m
-			 (Add rax (value->bits 1)))]
+       assert-integer rax m
+       (Add rax (value->bits 1)))]
     ['sub1
      (assert-help 
-			 assert-integer rax m
-			 (Sub rax (value->bits 1)))]
+       assert-integer rax m
+       (Sub rax (value->bits 1)))]
     ['zero?
      (assert-help 
-			 assert-integer rax m
+       assert-integer rax m
        (eq-value 0))]
     ['char?
      (type-pred mask-char type-char)]
     ['char->integer
      (assert-help 
-			 assert-char rax m
-			 (seq (Sar rax char-shift)
-          	(Sal rax int-shift)))]
+       assert-char rax m
+       (seq (Sar rax char-shift)
+            (Sal rax int-shift)))]
     ['integer->char
-		 (assert-help
-			 assert-codepoint rax m
-			 (seq (Sar rax int-shift)
-						(Sal rax char-shift)
-						(Xor rax type-char)))]
+     (assert-help
+       assert-codepoint rax m
+       (seq (Sar rax int-shift)
+            (Sal rax char-shift)
+            (Xor rax type-char)))]
     ['eof-object? (eq-value eof)]
     ['write-byte
-		 (assert-help
-			 assert-byte rax m
-			 (seq pad-stack
-						(Mov rdi rax)
-						(Call 'write_byte)
-						unpad-stack
-						(Mov rax (value->bits (void)))))]
+     (assert-help
+       assert-byte rax m
+       (seq pad-stack
+            (Mov rdi rax)
+            (Call 'write_byte)
+            unpad-stack
+            (Mov rax (value->bits (void)))))]
     ['box
      (seq (Mov (Offset rbx 0) rax)
           (Mov rax rbx)
           (Or rax type-box)
           (Add rbx 8))]
     ['unbox
-		 (assert-help
-			 assert-box rax m
-			 (seq (Xor rax type-box)
-          	(Mov rax (Offset rax 0))))]
+     (assert-help
+       assert-box rax m
+       (seq (Xor rax type-box)
+            (Mov rax (Offset rax 0))))]
     ['car
-		 (assert-help
-			 assert-cons rax m
-			 (seq (Xor rax type-cons)
-          	(Mov rax (Offset rax 8))))]
+     (assert-help
+       assert-cons rax m
+       (seq (Xor rax type-cons)
+            (Mov rax (Offset rax 8))))]
     ['cdr
-		 (assert-help
-			 assert-cons rax m
-			 (seq (Xor rax type-cons)
-          	(Mov rax (Offset rax 0))))]
+     (assert-help
+       assert-cons rax m
+       (seq (Xor rax type-cons)
+            (Mov rax (Offset rax 0))))]
     ['empty? (eq-value '())]
     ['box?
      (type-pred ptr-mask type-box)]
@@ -113,14 +113,14 @@
      (type-pred ptr-mask type-vect)]
     ['string?
      (type-pred ptr-mask type-str)]
-		['error?
-		 (type-pred ptr-mask type-error-v)]
+    ['error?
+     (type-pred ptr-mask type-error-v)]
     ['vector-length
      (let ((zero (gensym))
            (done (gensym)))
-			 (assert-help
-				 assert-vector rax m
-				 (seq (Xor rax type-vect)
+       (assert-help
+         assert-vector rax m
+         (seq (Xor rax type-vect)
             (Cmp rax 0)
             (Je zero)
             (Mov rax (Offset rax 0))
@@ -132,9 +132,9 @@
     ['string-length
      (let ((zero (gensym))
            (done (gensym)))
-			 (assert-help
-				 assert-string rax m
-				 (seq (Xor rax type-str)
+       (assert-help
+         assert-string rax m
+         (seq (Xor rax type-str)
             (Cmp rax 0)
             (Je zero)
             (Mov rax (Offset rax 0))
@@ -143,12 +143,12 @@
             (Label zero)
             (Mov rax 0)
             (Label done))))]
-		)))
+    )))
 
 ;; Op2 -> Asm
 (define (compile-op2 p)
-	(let ([m "primitive 2 error"])
-	(seq (Pop r8)
+  (let ([m "primitive 2 error"])
+  (seq (Pop r8)
   (match p
     ['+
      (assert-help* 
@@ -168,13 +168,13 @@
        (make-list 2 assert-integer)
        (list r8 rax)
        (make-list 2 m)
-			 (seq (Cmp r8 rax)
-				    (if-lt)))]
+       (seq (Cmp r8 rax)
+            (if-lt)))]
     ['=
-		 (assert-help*
+     (assert-help*
        (make-list 2 assert-integer)
        (list r8 rax)
-			 (make-list 2 m)
+       (make-list 2 m)
        (seq (Cmp r8 rax)
             (if-equal)))]
     ['cons
@@ -307,49 +307,49 @@
                 (Label bad)
                 (compile-error "string-ref")
                 (Label end)))))])
-		)))
+    )))
 
 ;; Op3 -> Asm
 (define (compile-op3 p)
-	(match p
-		['vector-set!
-		 (let ([bad (gensym)]
-					 [end (gensym)])
-			 (seq (Pop r10)
-						(Pop r8)
-           	(assert-help* 
-						 	(list assert-vector assert-integer)
+  (match p
+    ['vector-set!
+     (let ([bad (gensym)]
+           [end (gensym)])
+       (seq (Pop r10)
+            (Pop r8)
+            (assert-help* 
+              (list assert-vector assert-integer)
               (list r8 r10)
               (make-list 2 "primitive 3 error")
-              (seq	(Cmp r10 0)
-                  	(Jl bad)
-                  	(Xor r8 type-vect)       ; r8 = ptr
-                  	(Mov r9 (Offset r8 0))   ; r9 = len
-                  	(Sar r10 int-shift)      ; r10 = index
-                  	(Sub r9 1)
-                  	(Cmp r9 r10)
-                  	(Jl  bad)
-                  	(Sal r10 3)
-                  	(Add r8 r10)
-                  	(Mov (Offset r8 8) rax)
-                  	(Mov rax (value->bits (void)))
-                  	(Jmp end)
-                  	(Label bad)
-                  	(compile-error "vector-set")
-                  	(Label end)))))]))
+              (seq  (Cmp r10 0)
+                    (Jl bad)
+                    (Xor r8 type-vect)       ; r8 = ptr
+                    (Mov r9 (Offset r8 0))   ; r9 = len
+                    (Sar r10 int-shift)      ; r10 = index
+                    (Sub r9 1)
+                    (Cmp r9 r10)
+                    (Jl  bad)
+                    (Sal r10 3)
+                    (Add r8 r10)
+                    (Mov (Offset r8 8) rax)
+                    (Mov rax (value->bits (void)))
+                    (Jmp end)
+                    (Label bad)
+                    (compile-error "vector-set")
+                    (Label end)))))]))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Proc Register String Asm -> Asm
 (define (assert-help func reg message post)
-	(let ([end (gensym)])
-		(seq (func reg message)
-				 (Mov r9 rax)				;; copying to r9, rax untouched
-				 (And r9 ptr-mask)
-				 (Cmp r9 type-error)
-				 ;; if it is an error then we should not run the post code
-				 (Je end)
-				 post
-				 (Label end))))
+  (let ([end (gensym)])
+    (seq (func reg message)
+         (Mov r9 rax)       ;; copying to r9, rax untouched
+         (And r9 ptr-mask)
+         (Cmp r9 type-error)
+         ;; if it is an error then we should not run the post code
+         (Je end)
+         post
+         (Label end))))
 
 ;; version of assert help that will take multiple functions 
 ;; registers and messages. Will perform post if all assertions pass
@@ -385,19 +385,19 @@
 ;; assert type now puts type error in rax if it recieves an error
 (define (assert-type mask type)
   (λ (arg message)
-		(let ([end (gensym)])
-    	(seq (Mov r9 arg)
-					 (And r9 mask)
-					 (Cmp r9 type)
-					 (Je end)
-					 ; checking if this is already an error
-					 (Mov r9 arg)
-					 (And r9 ptr-mask)
-					 (Cmp r9 type-error)
-					 (Je	end)
-					 ;; only repopulating rax if there is an error
-					 (compile-error message)
-					 (Label end)))))
+    (let ([end (gensym)])
+      (seq (Mov r9 arg)
+           (And r9 mask)
+           (Cmp r9 type)
+           (Je end)
+           ; checking if this is already an error
+           (Mov r9 arg)
+           (And r9 ptr-mask)
+           (Cmp r9 type-error)
+           (Je  end)
+           ;; only repopulating rax if there is an error
+           (compile-error message)
+           (Label end)))))
 
 (define (type-pred mask type)
   (let ((l (gensym)))
@@ -423,50 +423,50 @@
 (define assert-proc
   (assert-type ptr-mask type-proc))
 (define assert-error-v
-	(assert-type ptr-mask type-error-v))
+  (assert-type ptr-mask type-error-v))
 
 (define (assert-codepoint r m)
   (let ([end (gensym)]
-				[bad (gensym)])
-		(assert-help
-			assert-integer r m
-			(seq 	(Cmp 	r (value->bits 0))
-						(Jl		bad)
-						(Cmp 	r (value->bits 1114111)) 
-						(Jg		bad)
-						(Cmp 	r (value->bits 55295))
-						(Jl 	end)
-						(Cmp 	r (value->bits 57344))
-						(Jg 	end)
-						(Label bad)
-						(compile-error m)
-						(Label end)))))
+        [bad (gensym)])
+    (assert-help
+      assert-integer r m
+      (seq  (Cmp  r (value->bits 0))
+            (Jl   bad)
+            (Cmp  r (value->bits 1114111)) 
+            (Jg   bad)
+            (Cmp  r (value->bits 55295))
+            (Jl   end)
+            (Cmp  r (value->bits 57344))
+            (Jg   end)
+            (Label bad)
+            (compile-error m)
+            (Label end)))))
 
 (define (assert-byte r m)
-	(let ([end 	(gensym)]
-				[bad 	(gensym)])
-		(assert-help
-			assert-integer r m
-			(seq	(Cmp	r (value->bits 0))
-						(Jl		bad)
-						(Cmp 	r (value->bits 255))
-						(Jg		bad)
-						(Jmp	end)
-						(Label bad)
-						(compile-error m)
-						(Label end)))))
+  (let ([end  (gensym)]
+        [bad  (gensym)])
+    (assert-help
+      assert-integer r m
+      (seq  (Cmp  r (value->bits 0))
+            (Jl   bad)
+            (Cmp  r (value->bits 255))
+            (Jg   bad)
+            (Jmp  end)
+            (Label bad)
+            (compile-error m)
+            (Label end)))))
 
 (define (assert-natural r m)
-	(let ([end (gensym)]
-				[bad (gensym)])
-		(assert-help
-			assert-integer r m
-			(seq	(Cmp 	r (value->bits 0))
-						(Jl		bad)
-						(Jmp 	end)
-						(Label bad)
-						(compile-error m)
-						(Label end)))))
+  (let ([end (gensym)]
+        [bad (gensym)])
+    (assert-help
+      assert-integer r m
+      (seq  (Cmp  r (value->bits 0))
+            (Jl   bad)
+            (Jmp  end)
+            (Label bad)
+            (compile-error m)
+            (Label end)))))
 
 ;; -> Asm
 ;; set rax to #t or #f based on given comparison
