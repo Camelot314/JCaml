@@ -363,6 +363,13 @@
                  10)
    (check-equal? (run '(try-catch (f 2) err (get-message err)))
                  "lookup error")
+   (check-equal? (run '((lambda (x y) x) 1 2 3)) 
+                 "ERROR: lambda: arity mismatch")
+   (check-equal? (run 
+                   '(define (f x) x)
+                   '((lambda (x y) (f x y)) 1 2))
+                 "ERROR: lambda: arity mismatch")
+
   )
 
 (define (test-runner-io run)

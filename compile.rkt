@@ -7,6 +7,7 @@
 (define rbx 'rbx) ; heap
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
+(define r11 'r11) ; for arity checking (volatile)
 
 ;; type CEnv = [Listof Id]
 
@@ -18,10 +19,12 @@
            (Global 'entry)
            (Label 'entry)
            (Push rbx)    ; save callee-saved register    
+           (Push r11) ; defensively saving r11 in case 
            (Mov rbx rdi) ; recv heap pointer
            (compile-defines-values ds)
            (compile-e e (reverse (define-ids ds)) #f)
            (Add rsp (* 8 (length ds))) ;; pop function definitions
+           (Pop r11)
            (Pop rbx)     ; restore callee-save register
            (Ret)
            (compile-defines ds)
@@ -70,8 +73,13 @@
   (let ((fvs (fv l)))
     (match l
       [(Lam f xs e)
-       (let ((env  (append (reverse fvs) (reverse xs) (list #f))))
+       (let ([env  (append (reverse fvs) (reverse xs) (list #f))]
+             [bad-arity (gensym 'bad_arity)])
          (seq (Label (symbol->label f))              
+              (%% "checking if arity matches amount of args recieved")
+              (%% "is in r11")
+              (Cmp r11 (length xs))
+              (Jne bad-arity)
               (Mov rax (Offset rsp (* 8 (length xs))))
               (Xor rax type-proc)
               (copy-env-to-stack fvs 8)
@@ -79,6 +87,16 @@
               (%% "popping the environment")
               (Add rsp (* 8 (length env))) ; pop env
               (%% "returning from function call")
+              (Ret)
+              (Label bad-arity)
+              (%% "Getting the number of bits to clear the stack by")
+              (%% "8 times number of arguments we recieved (which is in r11)")
+              (Mov r9 r11)
+              (Add r9 1)
+              (% "accounting for the first element on stack being func pointer")
+              (Sal r9 3)
+              (Add rsp r9)
+              (compile-error "lambda: arity mismatch")
               (Ret)))])))
 
 ;; [Listof Id] Int -> Asm
@@ -291,12 +309,13 @@
          (Add rsp 8)
          (Label end))))
 
-;; TODO: fix apply, defines, and lambdas
-;; need to check if the params resulted in an error
 ;; Id [Listof Expr] CEnv Bool -> Asm
 (define (compile-app f es c t?)
-  (if t? (compile-app-tail f es c)
-    (compile-app-nontail f es c)))
+  (seq (%% "compiling application") 
+       (Mov r11 (length es))
+       (if t? 
+         (compile-app-tail f es c)
+         (compile-app-nontail f es c))))
 
 ;; Expr [Listof Expr] CEnv -> Asm
 (define (compile-app-tail e es c)
@@ -337,8 +356,6 @@
          (Push rax)
          (compile-es (cons e es) (cons #f c))         
          (propagate param-error)
-         ; TODO:
-         ; checking if any of the compiled parameters are an error
          (Mov rax (Offset rsp i))
          (assert-help
            assert-proc rax "apply: not a procedure"
@@ -411,12 +428,7 @@
                (Mov (Offset rbx off) r8)
                (free-vars-to-heap fvs c (+ off 8)))])]))
 
-     #| (seq (Mov r8 (Offset rsp (lookup x c))) |#
-     #|      (Mov (Offset rbx off) r8) |#
-     #|      (free-vars-to-heap fvs c (+ off 8)))])) |#
-
 ;; [Listof Expr] CEnv -> Asm
-;; TODO: need to clean up stack if one of them compile to an error
 (define (compile-es es c)
   (let ([end (gensym)])
     (seq (%% "in compile-es")
