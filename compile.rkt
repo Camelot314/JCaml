@@ -28,10 +28,7 @@
            (Pop rbx)     ; restore callee-save register
            (Ret)
            (compile-defines ds)
-           (compile-lambda-defines (lambdas p))
-           (Label 'raise_error_align)
-           pad-stack
-           (Call 'raise_error))]))
+           (compile-lambda-defines (lambdas p)))]))
 
 (define (externs)
   (seq (Extern 'peek_byte)
