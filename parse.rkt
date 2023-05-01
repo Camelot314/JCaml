@@ -49,10 +49,10 @@
               (andmap symbol? xs))
          (Lam (gensym 'lambda) xs (parse-e e))
          (error "parse lambda error"))]
-		[(list 'error x) 				(Error-v (parse-e x))]
-		[(list 'raise x)				(Raise (parse-e x))]
-		[(list 'get-message x)	(Get-Message (parse-e x))]
-		[(list 'try-catch t (? symbol? x) c) (Try-Catch (parse-e t) x (parse-e c))]
+    [(list 'error x)        (Error-v (parse-e x))]
+    [(list 'raise x)        (Raise (parse-e x))]
+    [(list 'get-message x)  (Get-Message (parse-e x))]
+    [(list 'try-catch t (? symbol? x) c) (Try-Catch (parse-e t) x (parse-e c))]
     [(cons e es)
      (App (parse-e e) (map parse-e es))]    
     [_ (error "Parse error" s)]))
