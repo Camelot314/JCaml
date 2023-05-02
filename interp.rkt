@@ -98,7 +98,7 @@
           [vs
            (if (procedure? f)
                (apply f vs)
-               (Error "apply: not a precedure"))])])]
+               (Error "apply: not a procedure"))])])]
     [(Match e ps es)
      (match (interp-env e r ds)
        [(Error x) (Error x)]

@@ -373,7 +373,8 @@
                    '(define (f x) x)
                    '((lambda (x y) (f x y)) 1 2 3))
                  "ERROR: lambda: arity mismatch")
-   (check-equal? (run '(7)) "ERROR: apply: not a precedure")
+   (check-equal? (run '(7)) "ERROR: apply: not a procedure")
+   (check-equal? (run '(2 3 4)) "ERROR: apply: not a procedure")
   )
 
 (define (test-runner-io run)
