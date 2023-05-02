@@ -5,7 +5,7 @@
 ;; Env Variable -> Answer
 (define (lookup env x)
   (match env
-		['() (Error "lookup error")]
+    ['() (Error "lookup error")]
     [(cons (list y i) env)
      (match (symbol=? x y)
        [#t i]

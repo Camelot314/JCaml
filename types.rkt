@@ -9,8 +9,8 @@
 (define type-vect      #b011)
 (define type-str       #b100)
 (define type-proc      #b101)
-(define type-error-v 	 #b110)
-(define type-error		 #b111)
+(define type-error-v   #b110)
+(define type-error     #b111)
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
 (define type-int      #b0000)
@@ -73,12 +73,12 @@
   (zero? (bitwise-xor (bitwise-and v imm-mask) type-proc)))
 
 (define (error-v-bits? v)
-	(zero? (bitwise-xor (bitwise-and v imm-mask) type-error-v)))
+  (zero? (bitwise-xor (bitwise-and v imm-mask) type-error-v)))
 
 (define (error-bits? v)
-	(zero? (bitwise-xor (bitwise-and v imm-mask) type-error)))
+  (zero? (bitwise-xor (bitwise-and v imm-mask) type-error)))
 
 (define (err->string-bits v)
-	(if (error-bits? v)
-		(bitwise-ior (bitwise-xor v type-error) type-str)
-		(bitwise-ior (bitwise-xor v type-error-v) type-str)))
+  (if (error-bits? v)
+    (bitwise-ior (bitwise-xor v type-error) type-str)
+    (bitwise-ior (bitwise-xor v type-error-v) type-str)))
