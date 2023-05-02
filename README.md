@@ -45,3 +45,5 @@ errors (apart from parsing errors) can be caught with the `try-catch` function.
 ```racket
 (try-catch (raise (error "message")) err (get-message err))
 ```
+## Detailed Changes
+[Documentation](/documentation/JCaml_Documentation.md)
