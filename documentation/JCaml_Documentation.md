@@ -47,39 +47,18 @@ errors (apart from parsing errors) can be caught with the `try-catch` function.
 ```
 
 ### Standard Error Messages
-- When primtive gets an improper type:
+```python
+"ERROR: primitive <1/2/3> error"      # for invalid types
+"ERROR: make-vector"                  # make-vector gets negative length
+"ERROR: vector-ref"                   # vector-ref gets out of bounds index
+"ERROR: make-string"                  # negative length
+"ERROR: string-ref"                   # out of bounds
+"ERROR: vector-set"                   # invalid index
+"ERROR: lookup error"                 # variable or function does not exist
+"ERROR: error: need string"           # error value can only be made with a string
+"ERROR: raise: type error"            # raise can only be called with a type error
+"ERROR: apply: not a procedure"       # trying to apply a function on a non-function.
 ```
-ERROR: primitive <1/2/3> error
-```
-- When `make-vector` gets negative length
-```
-ERROR: make-vector
-```
-- When `vector-ref` gets out of bounds index 
-```
-ERROR: vector-ref
-```
-- When `make-string` gets negative length
-```
-ERROR: make-string
-```
-- When `string-ref` gets out of bound index
-```
-ERROR: string-ref
-```
-- When `vector-set!` gets out of bound index
-```
-ERROR: vector-set
-```
-- When variable refernce is unknown
-```
-ERROR: lookup error
-```
-- When `error` function gets input that is not a string
-```
-ERROR: error: need string
-```
-
 # Implementation
 An error is broken up into two different pointer types. 
 One is an `Error-v`. This is a glorified string pointer and is what the 
@@ -87,26 +66,26 @@ programmer will interact with when using `get-message` or `raise`. The
 other type is `Error` this is used only inside the assembly and is not 
 accessible to the programmer. It represents an error that was thrown and an 
 indication to propagate the error. This is also a glorified string pointer. 
-## `ast.rkt`
+## ast.rkt
 Addition of the following nodes
 - `(struct Error (e))` - This is a node that represents an uncuaght and thrown error. 
 - `(struct Error-v (e))` - This is a node that represents an error type that can be saved in a variable.
 - `(struct Raise (e))` - This is a node that represents raising an error
 - `(struct Get-Message (e))` - This is a node that represents getting the message from an error
 - `(struct Try-Catch (t x c))` - This is a node represents a try catch block. The first expression `t` is evaluated. If it results in an error then the `c` expression is evaluated. The environment for `c` will have access to a new variable with the id `x`.
-## `types.h` / `types.rkt`
+## types.h / types.rkt
 Added new pointer types for an `Error` and `Error-v` type.
 - `Error-v` ends in 6 (`error-v-type-tag`)
 - `Error` ends in 7 (`error-type-tag`)
-## `print.c`
+## print.c
 Adding functions to print an `Error-v` and `Error`.
-## `interp-prims.rkt`
+## interp-prims.rkt
 First, all primitives that recieve improper types will
 raise an `error`. Some primitives will also throw specific 
 error messages (see above). 
 Addtionally I added a new primtive `error?` which will check 
 if a given value is of type `Error-v`. 
-## `interp.rkt`
+## interp.rkt
 ### Propagation
 When interpetting an expression will check if the value is 
 of type `Error`. 
@@ -115,25 +94,25 @@ If it is then it will pass it up (like the `'err` in previous implementation).
 Instead of defaulting to a racket match error when a 
 function or varaible is not found in the environment, it 
 will return an `Error` value. 
-### `Raise`
+### Raise
 When interpreting `raise`, the program will check if the nested expression is of value `Error-v`. 
-### `Get-Message`
+### Get-Message
 For `Get-Message` the program will just retrieve the contained error message. 
-### `Try-Catch`
+### Try-Catch
 The program will frist evaluate the try expression. If the 
 value did not result in something of type `Error`, it will return that.
 If it did end up being type `Error` will convert the `Error` 
 into an `Error-v`, 
 then it will evlauate the catch expression with an extended 
 environment. Where the id is bound the the caught `Error-v`.
-## `compile-ops.rkt`
+## compile-ops.rkt
 Added a `compile-error` function that basically replicates the `compile-str` function but uses `error-type-tag` (7).
 
 Overall similar to `interp-prims.rkt`. Modified assertions so that if any of them fail it will compile an `error` using the `compile-error` function and a given default message. Now if assertions pass it will jump past any of the actual primitive code and compile an error.
 
 If the result was already an error it will jump past compile error code and will jump to the end (so `rax` keeps the already saved error)
 
-## `compile.rkt`
+## compile.rkt
 ### Propagation
 First the assembly checks if the value in `rax` has the `error-type-tag`. If it does then it will just jump to the end of the expression without any execution. This will "propagate" the error because it remains in `rax`.
 ### Lookup Errors
@@ -149,12 +128,12 @@ This is for the follwing example:
 (f (add1 #f))
 ```
 The `compile-es` function is modified so that if any of the parameters end up being an error when compiling them, it will clean up the stack and remove all the previous values and put the error into `rax`.
-### `Raise`
+### Raise
 First will compile the inner expression. If it has the `error-v-type-tag` it will change the tag to `error-type-tag`. This effectively "raises" an error because `rax` has an error in it.  
-### `Get-Message`
+### Get-Message
 Because `Error-v` is basically a string, it will just remove the 
 `error-v-type-tag` and add a `str-type-tag`. 
-### `Try-Catch`
+### Try-Catch
 The program will compile the first expression. It will then check if the 
 value in `rax` has an `error-type-tag`. 
 If it does not have the tag then it will jump to the end. Otherwise it will 
