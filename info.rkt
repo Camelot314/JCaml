@@ -1,3 +1,3 @@
 #lang info
-(define project custom)
-(define language loot)
+(define project 'custom)
+(define language 'loot)
