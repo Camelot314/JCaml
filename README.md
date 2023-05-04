@@ -47,3 +47,17 @@ errors (apart from parsing errors) can be caught with the `try-catch` function.
 ```
 ## Detailed Changes
 [Documentation](/documentation/JCaml_Documentation.md)
+
+## Using the Compiler
+This should be done using the `Makefile`.
+An example program (`example.rkt`) can be the following program
+```racket
+#lang racket
+(define (f x) (+ x 42))
+(try-catch (f #f) err (get-message err))
+```
+Then to compile the program:
+```bash
+make example.run
+```
+
